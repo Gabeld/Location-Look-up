@@ -22,8 +22,7 @@ class LocalSearchAutocomplete: UIViewController, UITableViewDataSource, UITableV
         return completer
     }()
     
-    var searchResults = [MKLocalSearchCompletion]()
-    
+    var predictions = [City]()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -31,48 +30,68 @@ class LocalSearchAutocomplete: UIViewController, UITableViewDataSource, UITableV
     }
     
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
-        searchResults = []
+        defer { tableView.reloadData() }
+        predictions = []
         guard searchText != "" else {
-            tableView.reloadData()
             return
         }
         searchCompleter.queryFragment = searchText
-        tableView.reloadData()
     }
     
     func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
         for item in completer.results {
             if item.title.contains(",") {
-                searchResults.append(item)
+                let splitString = item.title.components(separatedBy: ", ")
+                let newCity: City = {
+                    let city = City()
+                    if splitString.count == 3 {
+                        city.name = splitString[0]
+                        city.adminArea = splitString[1]
+                        city.country = splitString[2]
+                    } else {
+                        city.name = splitString[0]
+                        city.country = splitString[1]
+                    }
+                    return city
+                }()
+                predictions.append(newCity)
             }
         }
         tableView.reloadData()
     }
     
-     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-        cell.textLabel?.text = searchResults[indexPath.row].title
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "localSearchCell", for: indexPath)
+        cell.textLabel?.text = predictions[indexPath.row].name
+        cell.detailTextLabel?.text = predictions[indexPath.row].country
         return cell
     }
     
-     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return searchResults.count
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return predictions.count
     }
     
-     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
-        let item = searchResults[indexPath.row]
+        let item = searchCompleter.results[indexPath.row]
         let searchRequest = MKLocalSearchRequest(completion: item)
         let search = MKLocalSearch(request: searchRequest)
         
         search.start { (response, error ) in
-            if let placemark = response?.mapItems[0].placemark {
-                let city = placemark.locality!
-                let countryCode = placemark.isoCountryCode!
-                print("City name: \(city)", "Country: \(countryCode)")
-            } else {
-                if let error = error {
-                    print("Placemark not found \(error)")
+            DispatchQueue.main.async {
+                if let placemark = response?.mapItems[0].placemark {
+                    let name = placemark.locality ?? item.title
+                    let coordinates = placemark.coordinate
+                    
+                    let alertVC = UIAlertController(title: "\(name) coordinates", message: "lat: \(coordinates.latitude ), long: \(coordinates.longitude )", preferredStyle: .alert)
+                    let okButton = UIAlertAction(title: "OK", style: .default, handler: nil)
+                    alertVC.addAction(okButton)
+                    self.present(alertVC, animated: true, completion: nil)
+                    
+                } else {
+                    if let error = error {
+                        print("Placemark not found \(error)")
+                    }
                 }
             }
         }

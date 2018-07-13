@@ -30,10 +30,19 @@ class GeocodingViewController: UIViewController, UITableViewDataSource, UITableV
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
+        let cell = tableView.dequeueReusableCell(withIdentifier: "geocodingCell", for: indexPath)
         cell.textLabel?.text = cities[indexPath.row].name
         cell.detailTextLabel?.text = cities[indexPath.row].country
         return cell
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+        
+        let alertVC = UIAlertController(title: "Coordinates", message: "lat: \(cities[indexPath.row].location?.coordinate.latitude ?? 0), long: \(cities[indexPath.row].location?.coordinate.longitude ?? 0)", preferredStyle: .alert)
+        let okButton = UIAlertAction(title: "OK", style: .default, handler: nil)
+        alertVC.addAction(okButton)
+        present(alertVC, animated: true, completion: nil)
     }
     
     func getLocation(city: String) {

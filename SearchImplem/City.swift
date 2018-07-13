@@ -10,13 +10,10 @@ import Foundation
 
 class City: NSObject {
     
-    let name: String
-    let country: String
-    let adminName: String
+    var name: String?
+    var country: String?
+    var adminArea: String?
+    var coordinates: (Double, Double)?
+    var googleLocationID: String?
     
-    init(name: String, country: String, adminName: String) {
-        self.name = name
-        self.country = country
-        self.adminName = adminName
-    }
 }
